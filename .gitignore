@@ -1,0 +1,22 @@
+# Web (Frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/*.tsbuildinfo
+frontend/*.mjs
+
+# API (Backend)
+backend/venv/
+backend/__pycache__/
+backend/*.db
+backend/.env
+
+# OS/IDE
+.DS_Store
+.vscode/
+.idea/
+*.log
+node_modules/
+dist/
+.env
+.gemini/

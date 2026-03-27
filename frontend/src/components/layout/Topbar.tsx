@@ -1,0 +1,46 @@
+import { Bell, Search, User, Menu } from 'lucide-react';
+
+export function Topbar() {
+  return (
+    <header className="h-[72px] bg-[#09090b] border-b border-white/[0.05] sticky top-0 z-40 flex items-center justify-between px-6 xl:px-8">
+      
+      {/* LEFT AREA: Mobile menu + Search Side Elements */}
+      <div className="flex items-center gap-6">
+        <button className="lg:hidden text-zinc-500 hover:text-white transition-colors">
+          <Menu className="w-5 h-5" />
+        </button>
+        
+        <div className="hidden md:flex items-center gap-3 text-zinc-500 focus-within:text-white transition-all bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2 w-[400px] hover:bg-white/[0.04] focus-within:border-white/10 focus-within:bg-white/[0.04]">
+          <Search className="w-4 h-4 shrink-0 transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Search resources, anomalies, or insights..." 
+            className="bg-transparent border-none outline-none text-sm w-full font-medium placeholder:text-zinc-600 focus:placeholder:text-zinc-400"
+          />
+        </div>
+      </div>
+
+      {/* RIGHT AREA: Notifications & Profile */}
+      <div className="flex items-center gap-6 md:gap-8">
+        
+        <button className="relative text-zinc-500 hover:text-white transition-colors group">
+          <Bell className="w-[18px] h-[18px] group-hover:scale-110 transition-transform origin-top" />
+          <div className="absolute -top-0.5 -right-0.5 w-[6px] h-[6px] rounded-full bg-red-500 border border-[#09090b]" />
+        </button>
+        
+        <div className="h-6 w-px bg-white/[0.05]" />
+        
+        <button className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <div className="text-right hidden sm:block">
+            <p className="text-[11px] font-bold text-white mb-0.5">AWS Free Tier</p>
+            <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-opacity-80">Admin</p>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+            <User className="w-[18px] h-[18px] opacity-90" />
+          </div>
+        </button>
+
+      </div>
+    </header>
+  );
+}
