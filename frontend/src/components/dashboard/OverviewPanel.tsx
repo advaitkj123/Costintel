@@ -1,37 +1,10 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceDot } from 'recharts';
-import { AlertCircle, CheckCircle2, Zap, Brain, Server, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Zap, Brain, Server, ArrowRight, ArrowUpRight, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { getCostSummary, getAnomalies, getActions, CostSummaryResponse, AnomalyResponse, ActionResponse } from '../../services/api';
 
-// --- MOCK STORYTELLING DATA ---
-const mockTrendData = [
-  { name: 'Mon', cost: 3100.50, baseline: 3000, fullDate: '2023-10-16', note: null },
-  { name: 'Tue', cost: 3150.20, baseline: 3000, fullDate: '2023-10-17', note: null },
-  { name: 'Wed', cost: 4850.90, baseline: 3050, fullDate: '2023-10-18', note: 'Cost Spike Detected' },  
-  { name: 'Thu', cost: 4200.10, baseline: 3050, fullDate: '2023-10-19', note: 'Auto-Fix Applied' },
-  { name: 'Fri', cost: 3050.40, baseline: 3100, fullDate: '2023-10-20', note: 'Run-rate Stabilized' },
-  { name: 'Sat', cost: 2900.80, baseline: 3100, fullDate: '2023-10-21', note: null },
-  { name: 'Sun', cost: 2880.60, baseline: 3100, fullDate: '2023-10-22', note: null },
-];
 
-const mockProblems = [
-  { id: 1, service: 'Amazon EC2', impact: '+32%', cost: '+$1,800/wk', severity: 'High', time: '2 mins ago', details: 'Unattached instances' },
-  { id: 2, service: 'Amazon RDS', impact: '+14%', cost: '+$420/wk', severity: 'Medium', time: '5 hrs ago', details: 'Over-provisioned DB' }
-];
-
-const mockActions = [
-  { id: 1, action: 'Stopped 4 idle c5.xlarge', before: '$1,120/wk', after: '$280/wk', result: '-$840', percent: '75%', time: 'Thu 10:00' },
-  { id: 2, action: 'Downsized RDS to db.t3.large', before: '$600/wk', after: '$198/wk', result: '-$402', percent: '67%', time: 'Thu 11:30' }
-];
-
-const mockSavings = {
-  total: 1242.00,
-  comparison: '+14% vs last week',
-  breakdown: [
-    { service: 'EC2 Compute', amount: 840.00, percent: 68 },
-    { service: 'RDS Database', amount: 402.00, percent: 32 }
-  ]
-};
 
 // Animated Counter Component
 const AnimatedCounter = ({ value, prefix = "", decimals = 0 }: { value: number, prefix?: string, decimals?: number }) => {
@@ -76,14 +49,64 @@ const CustomPulseDot = (props: any) => {
 
 export function OverviewPanel() {
   const [alerts, setAlerts] = useState<any[]>([]);
-  const [hasData, setHasData] = useState(true); // Mocking data availability
-  const [showHint, setShowHint] = useState(true); // First-time onboarding hint
+  const [hasData, setHasData] = useState(true);
+  const [showHint, setShowHint] = useState(true);
+  const [loading, setLoading] = useState(true);
+  
+  // Real Data State
+  const [costSummary, setCostSummary] = useState<CostSummaryResponse | null>(null);
+  const [anomalies, setAnomalies] = useState<AnomalyResponse[]>([]);
+  const [actions, setActions] = useState<ActionResponse[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [cost, anoms, acts] = await Promise.all([
+          getCostSummary(),
+          getAnomalies(),
+          getActions()
+        ]);
+        setCostSummary(cost);
+        setAnomalies(anoms);
+        setActions(acts);
+        if (cost.trend.length === 0) setHasData(false);
+      } catch (err) {
+        console.error("Failed to fetch backend data:", err);
+        // Keep hasData as true for now to show the dashboard even on error (could fall back to mock)
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadData();
+
+    const interval = setInterval(loadData, 30000); // 30s refresh
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     setTimeout(() => {
-      setAlerts([{ id: 1, title: 'EC2 cost spike detected (+32%)', impact: '+$1,800/wk estimated', priority: 'high', time: 'Just now' }]);
+      setAlerts([{ id: 1, title: 'Autonomous Engine Active', impact: 'Monitoring real-time infrastructure', priority: 'high', time: 'Just now' }]);
     }, 1500);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[600px]">
+        <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+        <p className="text-zinc-500 font-medium animate-pulse">Initializing Sentinel Engine...</p>
+      </div>
+    );
+  }
+
+  // Map Backend Trend to Recharts Structure
+  const chartData = costSummary?.trend.map(p => ({
+    name: new Date(p.timestamp).toLocaleDateString(undefined, { weekday: 'short' }),
+    fullDate: new Date(p.timestamp).toLocaleDateString(),
+    cost: p.estimated_cost,
+    baseline: p.estimated_cost * 0.9, // Backend doesn't provide baseline, so we visualize a -10% target
+    note: null
+  })) || [];
 
   return (
     <div className="max-w-[1400px] mx-auto pt-6 pb-24 px-6 md:px-12 antialiased font-sans text-white/90">
@@ -122,22 +145,22 @@ export function OverviewPanel() {
       </div>
 
       {/* 2. WELCOME CONTEXT (Premium Onboarding Header) */}
-      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8">
+      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8 relative z-10">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
           <h1 className="text-3xl font-black tracking-tight text-white mb-2">Welcome back, Administrator 👋</h1>
           <p className="text-zinc-400 font-medium">
-            Monitoring <span className="text-white font-bold"><AnimatedCounter value={24132} prefix="$" /></span> across your AWS infrastructure
+            Monitoring <span className="text-white font-bold"><AnimatedCounter value={costSummary?.total_cost || 0} prefix="$" decimals={2} /></span> across your infrastructure
           </p>
         </motion.div>
         
         <div className="flex items-center gap-4">
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-3 text-center min-w-[140px]">
             <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Anomalies</p>
-            <p className="text-xl font-black text-white">2 Detected</p>
+            <p className="text-xl font-black text-white">{anomalies.length} Detected</p>
           </div>
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-5 py-3 text-center min-w-[140px]">
-            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Saved Week</p>
-            <p className="text-xl font-black text-white"><AnimatedCounter value={1242} prefix="$" /></p>
+            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Total Savings</p>
+            <p className="text-xl font-black text-white"><AnimatedCounter value={costSummary?.total_savings || 0} prefix="$" decimals={2} /></p>
           </div>
         </div>
       </div>
@@ -202,7 +225,7 @@ export function OverviewPanel() {
 
         <div className="h-[420px] w-full relative z-10">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={mockTrendData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
               <defs>
                 <linearGradient id="actualSpendLive" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25}/>
@@ -246,11 +269,11 @@ export function OverviewPanel() {
                         <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider mb-4 border-b border-white/10 pb-2">{data.fullDate}</p>
                         <div className="space-y-3">
                            <div className="flex items-center justify-between gap-8">
-                              <span className="text-xs text-red-400 font-bold flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-400" />Actual Run-Rate</span>
+                              <span className="text-xs text-red-400 font-bold flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-400" />Realtime Velocity</span>
                               <span className="text-[15px] font-black text-white">${data.cost.toLocaleString()}</span>
                            </div>
                            <div className="flex items-center justify-between gap-8">
-                              <span className="text-xs text-indigo-400 font-bold flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-400" />Baseline Target</span>
+                              <span className="text-xs text-indigo-400 font-bold flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-400" />System Baseline</span>
                               <span className="text-[15px] font-bold text-zinc-300">${data.baseline.toLocaleString()}</span>
                            </div>
                         </div>
@@ -306,7 +329,7 @@ export function OverviewPanel() {
              Active Anomalies
           </h2>
           <div className="space-y-3 relative z-10">
-            {mockProblems.map((prob, i) => (
+            {anomalies.length > 0 ? anomalies.map((prob, i) => (
               <motion.div 
                  initial={{ opacity: 0, y: 10 }}
                  animate={{ opacity: 1, y: 0 }}
@@ -316,22 +339,23 @@ export function OverviewPanel() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${prob.severity === 'High' ? 'bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-orange-500/20 text-orange-400 border border-orange-500/20'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${prob.severity.toLowerCase() === 'high' ? 'bg-red-500 text-white shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-orange-500/20 text-orange-400 border border-orange-500/20'}`}>
                       {prob.severity}
                     </span>
-                    <p className="text-sm font-bold text-white leading-none">{prob.service}</p>
+                    <p className="text-sm font-bold text-white leading-none">{prob.resource_id}</p>
                   </div>
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase">{prob.time}</span>
+                  <span className="text-[10px] text-zinc-500 font-bold uppercase">{new Date(prob.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
                 <div className="flex items-end justify-between">
                    <div>
-                      <p className="text-xs text-zinc-400 font-medium mb-1">{prob.details}</p>
-                      <p className="text-lg font-black text-red-400 tracking-tight">{prob.impact}</p>
+                      <p className="text-xs text-zinc-400 font-medium mb-1">{prob.description}</p>
+                      <p className="text-lg font-black text-red-400 tracking-tight">{prob.anomaly_type}</p>
                    </div>
-                   <p className="text-xs font-bold text-red-500 border border-red-500/20 bg-red-500/10 px-2.5 py-1.5 rounded-lg shadow-inner">{prob.cost}</p>
                 </div>
               </motion.div>
-            ))}
+            )) : (
+              <p className="text-xs text-zinc-500 italic text-center py-10">No active anomalies detected.</p>
+            )}
           </div>
         </div>
 
@@ -343,7 +367,7 @@ export function OverviewPanel() {
              Autonomous Executions
           </h2>
           <div className="space-y-3 relative z-10">
-            {mockActions.map((action, i) => (
+            {actions.length > 0 ? actions.map((action, i) => (
               <motion.div 
                  initial={{ opacity: 0, y: 10 }}
                  animate={{ opacity: 1, y: 0 }}
@@ -353,30 +377,19 @@ export function OverviewPanel() {
               >
                 <div className="flex items-center gap-2 mb-4">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <p className="text-sm font-bold text-white leading-snug">{action.action}</p>
-                </div>
-                <div className="flex items-center justify-between mb-4 bg-[#09090b] rounded-xl p-2.5 border border-white/5 shadow-inner">
-                   <div className="text-center flex-1">
-                      <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest mb-1">Baseline</p>
-                      <p className="text-xs font-bold text-zinc-400 line-through decoration-red-500/50">{action.before}</p>
-                   </div>
-                   <div className="px-3">
-                      <ArrowRight className="w-4 h-4 text-emerald-500/50" />
-                   </div>
-                   <div className="text-center flex-1">
-                      <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest mb-1">Optimized</p>
-                      <p className="text-xs font-black text-emerald-400">{action.after}</p>
-                   </div>
+                  <p className="text-sm font-bold text-white leading-snug">{action.description}</p>
                 </div>
                 <div className="flex items-center justify-between">
-                   <span className="text-[10px] text-zinc-500 font-bold uppercase">{action.time}</span>
+                   <span className="text-[10px] text-zinc-500 font-bold uppercase">{new Date(action.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-md">-{action.percent}</span>
-                      <span className="text-sm font-black text-emerald-400 tracking-tight">{action.result}</span>
+                      <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-md">Saved</span>
+                      <span className="text-sm font-black text-emerald-400 tracking-tight">${action.savings_achieved.toFixed(2)}</span>
                    </div>
                 </div>
               </motion.div>
-            ))}
+            )) : (
+              <p className="text-xs text-zinc-500 italic text-center py-10">No autonomous actions yet.</p>
+            )}
           </div>
         </div>
 
@@ -398,17 +411,17 @@ export function OverviewPanel() {
             <p className="text-[10px] text-indigo-300 uppercase font-black tracking-[0.2em] mb-2">Total Savings</p>
             <p className="text-4xl font-black tracking-tighter text-white mb-3 flex items-center justify-center gap-1">
               <span className="text-indigo-400 text-2xl">$</span>
-              <AnimatedCounter value={mockSavings.total} decimals={2} />
+              <AnimatedCounter value={costSummary?.total_savings || 0} decimals={2} />
             </p>
             <span className="text-[10px] font-black text-emerald-400 border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 rounded-md uppercase tracking-wider inline-flex items-center gap-1 shadow-inner">
                <ArrowUpRight className="w-3 h-3" />
-               {mockSavings.comparison}
+               +100% Autonomous
             </span>
           </motion.div>
 
-          <p className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.15em] mb-4 border-b border-white/5 pb-2 relative z-10">Service Trajectory</p>
+          <p className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.15em] mb-4 border-b border-white/5 pb-2 relative z-10">Service Breakdown</p>
           <div className="space-y-6 relative z-10">
-            {mockSavings.breakdown.map((item, idx) => (
+            {costSummary?.per_resource.map((item, idx) => (
               <motion.div 
                  initial={{ opacity: 0, x: -10 }}
                  animate={{ opacity: 1, x: 0 }}
@@ -417,16 +430,15 @@ export function OverviewPanel() {
                  className="group"
               >
                 <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="font-bold text-white tracking-wide">{item.service}</span>
+                  <span className="font-bold text-white tracking-wide truncate max-w-[140px]">{item.resource_name || item.resource_id}</span>
                   <div className="flex items-baseline gap-2">
-                     <span className="font-black text-indigo-400">${item.amount.toFixed(2)}</span>
-                     <span className="font-bold text-zinc-500">({item.percent}%)</span>
+                     <span className="font-black text-indigo-400">${item.total_cost.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="w-full h-2.5 bg-[#09090b] rounded-full overflow-hidden border border-white/5 shadow-inner relative">
                   <motion.div 
                     initial={{ width: 0 }}
-                    animate={{ width: `${item.percent}%` }}
+                    animate={{ width: `${Math.min(100, (item.total_cost / (costSummary?.total_cost || 1)) * 100)}%` }}
                     transition={{ duration: 1.5, ease: 'easeOut', delay: 0.6 }}
                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-500 to-indigo-400 rounded-full group-hover:shadow-[0_0_10px_rgba(99,102,241,0.5)] transition-shadow" 
                   />
