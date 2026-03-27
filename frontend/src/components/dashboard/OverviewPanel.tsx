@@ -52,6 +52,17 @@ export function OverviewPanel() {
   const [hasData, setHasData] = useState(true);
   const [showHint, setShowHint] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [seenAnomalyIds, setSeenAnomalyIds] = useState<Set<number>>(new Set());
+  const [expandedAlerts, setExpandedAlerts] = useState<Set<number>>(new Set());
+  
+  const toggleAlertDetails = (id: number) => {
+    setExpandedAlerts(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
   
   // Real Data State
   const [costSummary, setCostSummary] = useState<CostSummaryResponse | null>(null);
@@ -85,10 +96,34 @@ export function OverviewPanel() {
   }, []);
 
   useEffect(() => {
-    setTimeout(() => {
-      setAlerts([{ id: 1, title: 'Autonomous Engine Active', impact: 'Monitoring real-time infrastructure', priority: 'high', time: 'Just now' }]);
-    }, 1500);
-  }, []);
+    if (anomalies.length > 0) {
+      const newAlerts: any[] = [];
+      const newSeen = new Set(seenAnomalyIds);
+      
+      anomalies.forEach(anomaly => {
+        if (!newSeen.has(anomaly.id)) {
+          newSeen.add(anomaly.id);
+          newAlerts.push({
+            id: anomaly.id,
+            title: `Alert: ${anomaly.resource_id}`,
+            impact: `${anomaly.anomaly_type} detected. System marked as ${anomaly.severity} severity.`,
+            priority: anomaly.severity.toLowerCase(),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          });
+        }
+      });
+      
+      if (newAlerts.length > 0) {
+        setAlerts(prev => [...newAlerts, ...prev].slice(0, 3));
+        setSeenAnomalyIds(newSeen);
+        
+        // Auto-dismiss the new popup alerts after 8 seconds
+        setTimeout(() => {
+          setAlerts(current => current.filter(a => !newAlerts.find(na => na.id === a.id)));
+        }, 8000);
+      }
+    }
+  }, [anomalies]);
 
   if (loading) {
     return (
@@ -135,9 +170,33 @@ export function OverviewPanel() {
                 </div>
                 <p className="text-xs text-red-400 font-medium mb-3">{alert.impact}</p>
                 <div className="flex items-center gap-2">
-                  <button className="text-xs font-bold text-black bg-white hover:bg-zinc-200 px-3 py-1.5 rounded-md transition-colors shadow-lg">Auto Fix</button>
-                  <button className="text-xs font-semibold text-zinc-400 hover:text-white px-2 py-1.5 transition-colors">View Details</button>
+                  <button className="text-xs font-bold text-black bg-white hover:bg-zinc-200 px-3 py-1.5 rounded-md transition-colors shadow-lg relative group overflow-hidden">
+                    <span className="relative z-10 text-black group-hover:text-black">Auto Fix</span>
+                  </button>
+                  <button 
+                    onClick={() => toggleAlertDetails(alert.id)}
+                    className="text-xs font-semibold text-zinc-400 hover:text-white px-2 py-1.5 transition-colors"
+                  >
+                    {expandedAlerts.has(alert.id) ? 'Collapse Details' : 'View Details'}
+                  </button>
                 </div>
+                
+                {/* Expandable Details Frame */}
+                <AnimatePresence>
+                  {expandedAlerts.has(alert.id) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                      animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
+                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-3 bg-black/40 border border-white/5 rounded-lg text-xs text-zinc-400 leading-relaxed font-mono">
+                         <span className="text-red-400 bg-red-500/10 px-1 py-0.5 rounded font-black mr-2">LOG</span>
+                         AI engine identified strict deviation from a 14-day trailing cost baseline. Unrecognized metric explosion. Suggesting instance teardown or hard-throttle on traffic.
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           ))}

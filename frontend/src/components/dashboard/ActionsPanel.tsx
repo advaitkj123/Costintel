@@ -1,22 +1,41 @@
-import { useState } from 'react';
-import { CheckCircle2, Zap, Settings2, SquareTerminal } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-const mockActions = [
-  { id: 1, action: 'Stopped 4 idle c5.xlarge instances', type: 'Autonomous', result: '-$840/wk', time: 'Thu 10:00', resource: 'EC2-AutoScaling-Prod' },
-  { id: 2, action: 'Downsized over-provisioned RDS', type: 'Manual', result: '-$402/wk', time: 'Thu 11:30', resource: 'RDS-Primary-Cluster' },
-  { id: 3, action: 'Deleted 12 unattached EBS volumes', type: 'Autonomous', result: '-$145/wk', time: 'Wed 18:45', resource: 'EBS-Vol-Group' },
-];
-
-const mockExecutionHistory = [
-  { id: 'OPT-001', action: 'Right-sized EC2 i-4a2c from m5.2xlarge to m5.xlarge', category: 'Compute', savings: '$1,840/mo', status: 'completed', time: '27 Mar, 1:30 PM' },
-  { id: 'OPT-002', action: 'Enabled S3 Intelligent-Tiering on assets-bucket', category: 'Storage', savings: '$620/mo', status: 'completed', time: '26 Mar, 11:00 AM' },
-  { id: 'OPT-003', action: 'Terminated 3 idle EC2 instances in eu-west-1', category: 'Compute', savings: '$2,460/mo', status: 'completed', time: '25 Mar, 4:15 PM' },
-  { id: 'OPT-004', action: 'Switched RDS to reserved instance pricing', category: 'Database', savings: '$3,210/mo', status: 'completed', time: '24 Mar, 9:00 AM' },
-];
+import { useState, useEffect } from 'react';
+import { CheckCircle2, Zap, Settings2, SquareTerminal, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getActions, ActionResponse } from '../../services/api';
 
 export function ActionsPanel() {
   const [automationEnabled, setAutomationEnabled] = useState(true);
+  const [actions, setActions] = useState<ActionResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchActions() {
+      try {
+        const data = await getActions();
+        setActions(data);
+      } catch (err) {
+        console.error("Failed to fetch actions:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchActions();
+    const int = setInterval(fetchActions, 30000);
+    return () => clearInterval(int);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[600px] antialiased text-white/90">
+        <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-4" />
+        <p className="text-zinc-500 font-medium animate-pulse">Loading execution logs...</p>
+      </div>
+    );
+  }
+
+  // Calculate dynamics
+  const totalMonthlySavings = actions.reduce((sum, act) => sum + (act.savings_achieved * 4), 0); // approx monthly
 
   return (
     <div className="max-w-[1200px] mx-auto pt-6 pb-24 antialiased text-white/90">
@@ -52,38 +71,45 @@ export function ActionsPanel() {
 
       {/* ACTIONS LOG */}
       <div className="space-y-4">
-        {mockActions.map((action, idx) => (
-          <motion.div 
-            key={action.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="bg-[#111113]/50 border border-white/5 p-6 rounded-2xl hover:bg-white/[0.02] transition-colors group"
-          >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-start gap-4 flex-1">
-                <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0 mt-1" />
-                <div>
-                  <div className="flex items-center gap-3 mb-1.5">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${action.type === 'Autonomous' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-zinc-500/10 text-zinc-400'}`}>
-                      {action.type}
-                    </span>
-                    <span className="text-xs text-zinc-500 font-medium">{action.time}</span>
+        <AnimatePresence>
+          {actions.length === 0 && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-10 text-zinc-500 italic">
+              No recent autonomous executions found.
+            </motion.div>
+          )}
+          {actions.slice(0, 5).map((action, idx) => (
+            <motion.div 
+              key={action.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              className="bg-[#111113]/50 border border-white/5 p-6 rounded-2xl hover:bg-white/[0.02] transition-colors group"
+            >
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-start gap-4 flex-1">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0 mt-1" />
+                  <div>
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400">
+                        Autonomous
+                      </span>
+                      <span className="text-xs text-zinc-500 font-medium">{new Date(action.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-1">{action.description}</h3>
+                    <p className="text-xs text-zinc-500 font-mono">Action Type: {action.action_type}</p>
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-1">{action.action}</h3>
-                  <p className="text-xs text-zinc-500 font-mono">{action.resource}</p>
+                </div>
+
+                <div className="flex items-center gap-8 shrink-0">
+                   <div className="text-right">
+                     <p className="text-xs font-medium text-zinc-500 mb-0.5 uppercase tracking-wider">Estimated Savings</p>
+                     <p className="text-2xl font-bold text-emerald-400 tracking-tight">${action.savings_achieved.toFixed(2)}</p>
+                   </div>
                 </div>
               </div>
-
-              <div className="flex items-center gap-8 shrink-0">
-                 <div className="text-right">
-                   <p className="text-xs font-medium text-zinc-500 mb-0.5 uppercase tracking-wider">Weekly Savings</p>
-                   <p className="text-2xl font-bold text-emerald-400 tracking-tight">{action.result}</p>
-                 </div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
 
       {/* Manual Action Button */}
@@ -98,7 +124,7 @@ export function ActionsPanel() {
       <div>
         <div className="mb-6">
           <h2 className="text-2xl font-semibold tracking-tight text-white mb-1">Optimization Executions</h2>
-          <p className="text-sm text-zinc-400">8 total — saving $11,270/mo</p>
+          <p className="text-sm text-zinc-400">{actions.length} total — saving ${totalMonthlySavings.toFixed(2)}/mo</p>
         </div>
 
         {/* Summary Cards */}
@@ -108,7 +134,7 @@ export function ActionsPanel() {
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
              </div>
              <div>
-                <p className="text-2xl font-bold text-white leading-none mb-1">7</p>
+                <p className="text-2xl font-bold text-white leading-none mb-1">{actions.length}</p>
                 <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Completed</p>
              </div>
           </div>
@@ -119,7 +145,7 @@ export function ActionsPanel() {
                 </svg>
              </div>
              <div>
-                <p className="text-2xl font-bold text-white leading-none mb-1">1</p>
+                <p className="text-2xl font-bold text-white leading-none mb-1">0</p>
                 <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">In Progress</p>
              </div>
           </div>
@@ -128,7 +154,7 @@ export function ActionsPanel() {
                 <Zap className="w-5 h-5 text-indigo-400" />
              </div>
              <div>
-                <p className="text-2xl font-bold text-white leading-none mb-1">$11,270</p>
+                <p className="text-2xl font-bold text-white leading-none mb-1">${totalMonthlySavings.toFixed(2)}</p>
                 <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Monthly Savings</p>
              </div>
           </div>
@@ -145,29 +171,27 @@ export function ActionsPanel() {
                 <tr className="border-b border-white/5 bg-white/[0.02]">
                   <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">ID</th>
                   <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Action</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Impact Details</th>
                   <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Savings</th>
                   <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right">Executed</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {mockExecutionHistory.map((row) => (
+                {actions.length === 0 ? (
+                   <tr><td colSpan={6} className="px-6 py-8 text-center text-zinc-500 text-sm">No executions recorded.</td></tr>
+                ) : actions.map((row) => (
                   <tr key={row.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-6 py-4 text-sm font-mono text-zinc-400 whitespace-nowrap">{row.id}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-white">{row.action}</td>
-                    <td className="px-6 py-4 text-sm text-zinc-400">{row.category}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-emerald-400">{row.savings}</td>
+                    <td className="px-6 py-4 text-sm font-mono text-zinc-400 whitespace-nowrap">OPT-{row.id.toString().padStart(3, '0')}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-white">{row.description}</td>
+                    <td className="px-6 py-4 text-sm text-zinc-400">{row.impact_description || row.action_type}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-emerald-400">${row.savings_achieved.toFixed(2)}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest ${
-                        row.status === 'completed' 
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                          : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
-                      }`}>
-                        {row.status}
+                      <span className="inline-flex items-center justify-center px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        completed
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-zinc-500 text-right whitespace-nowrap">{row.time}</td>
+                    <td className="px-6 py-4 text-sm text-zinc-500 text-right whitespace-nowrap">{new Date(row.timestamp).toLocaleDateString()} {new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                   </tr>
                 ))}
               </tbody>

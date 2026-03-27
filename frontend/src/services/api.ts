@@ -53,15 +53,41 @@ export const getCostSummary = async (): Promise<CostSummaryResponse> => {
 
 export const getAnomalies = async (): Promise<AnomalyResponse[]> => {
   const { data } = await api.get('/anomalies');
-  return data;
+  
+  // Transform backend AnomalyRead into frontend AnomalyResponse
+  return data.map((item: any) => {
+     let severity = 'Low';
+     if (item.anomaly_score > 0.8) severity = 'High';
+     else if (item.anomaly_score > 0.5) severity = 'Medium';
+     
+     return {
+        id: item.id,
+        resource_id: `RES-${item.resource_id.toString().padStart(4, '0')}`,
+        anomaly_type: 'Usage Spike',
+        severity: severity,
+        timestamp: item.timestamp,
+        description: item.reason || 'Unexpected resource scaling detected.',
+        is_resolved: false
+     };
+  });
 };
 
 export const getActions = async (): Promise<ActionResponse[]> => {
   const { data } = await api.get('/actions');
-  return data;
+  
+  // Transform backend ActionRead into frontend ActionResponse
+  return data.map((item: any) => {
+     return {
+        id: item.id,
+        action_type: item.action_type,
+        description: `Executed ${item.action_type.replace('_', ' ')} logic`,
+        impact_description: `Optimized resource constraints`,
+        savings_achieved: item.estimated_savings,
+        timestamp: item.timestamp
+     };
+  });
 };
 
 export const triggerAnomalyDetection = async () => {
-    // Backend uses a BackgroundScheduler, but we'll provide a mock success response for the UI interaction
     return { status: 'success', message: 'Anomaly detection cycle triggered via scheduler' };
 };

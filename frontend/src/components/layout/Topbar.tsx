@@ -1,6 +1,9 @@
-import { Bell, Search, User, Menu } from 'lucide-react';
+import { Bell, Search, User, Menu, Server } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function Topbar() {
+  const [showNotifications, setShowNotifications] = useState(false);
   return (
     <header className="h-[72px] bg-[#09090b] border-b border-white/[0.05] sticky top-0 z-40 flex items-center justify-between px-6 xl:px-8">
       
@@ -23,10 +26,43 @@ export function Topbar() {
       {/* RIGHT AREA: Notifications & Profile */}
       <div className="flex items-center gap-6 md:gap-8">
         
-        <button className="relative text-zinc-500 hover:text-white transition-colors group">
-          <Bell className="w-[18px] h-[18px] group-hover:scale-110 transition-transform origin-top" />
-          <div className="absolute -top-0.5 -right-0.5 w-[6px] h-[6px] rounded-full bg-red-500 border border-[#09090b]" />
-        </button>
+        <div className="relative flex items-center">
+          <button 
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="relative text-zinc-500 hover:text-white transition-colors group"
+          >
+            <Bell className="w-[18px] h-[18px] group-hover:scale-110 transition-transform origin-top" />
+            <div className="absolute -top-0.5 -right-0.5 w-[6px] h-[6px] rounded-full bg-red-500 border border-[#09090b]" />
+          </button>
+
+          <AnimatePresence>
+            {showNotifications && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute top-10 right-0 w-80 bg-[#18181b] border border-white/10 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50 text-left"
+              >
+                <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                  <p className="text-sm font-bold text-white">System Alerts</p>
+                  <span className="text-[10px] bg-red-500/20 text-red-500 border border-red-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">1 New</span>
+                </div>
+                <div className="p-2 max-h-[300px] overflow-y-auto">
+                  <div className="p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors flex gap-3 items-start">
+                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex shrink-0 items-center justify-center mt-0.5">
+                      <Server className="w-4 h-4 text-indigo-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white mb-1">Engine Connected</p>
+                      <p className="text-[11.5px] text-zinc-400 leading-snug">Sentinel Engine is actively connected to your AWS instance metrics and scanning for anomalies.</p>
+                      <p className="text-[9px] text-zinc-500 font-bold tracking-wider uppercase mt-2">Just now</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
         
         <div className="h-6 w-px bg-white/[0.05]" />
         
