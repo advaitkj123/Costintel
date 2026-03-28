@@ -50,6 +50,16 @@ class MetricOrchestrator:
         if not resource:
             raise ValueError(f"Resource {payload.resource_id} not found")
 
+        existing_metric = self.metric_repo.get_by_timestamp(payload.resource_id, payload.timestamp)
+        if existing_metric:
+            return MetricIngestResponse(
+                metric_id=existing_metric.id,
+                cost_record_id=0,
+                anomaly_detected=False,
+                action_executed=None,
+                action_status=None,
+            )
+
         metric_record = self.metric_repo.create(
             Metric(
                 resource_id=payload.resource_id,

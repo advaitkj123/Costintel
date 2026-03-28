@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -16,6 +18,13 @@ class MetricRepository:
         self.db.flush()
         self.db.refresh(metric)
         return metric
+
+    def get_by_timestamp(self, resource_id: int, timestamp: datetime) -> Metric | None:
+        stmt = select(Metric).where(
+            Metric.resource_id == resource_id,
+            Metric.timestamp == timestamp
+        )
+        return self.db.scalar(stmt)
 
     def list(self, limit: int = 100, resource_id: int | None = None) -> list[Metric]:
         stmt = select(Metric)
