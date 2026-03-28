@@ -2,8 +2,10 @@ import { Bell, Search, User, Menu, Server, AlertCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAnomalies, AnomalyResponse } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export function Topbar() {
+  const { user } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [anomalies, setAnomalies] = useState<AnomalyResponse[]>([]);
   const [seenAnomalies, setSeenAnomalies] = useState<Set<number>>(new Set());
@@ -112,8 +114,8 @@ export function Topbar() {
         
         <button className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="text-right hidden sm:block">
-            <p className="text-[11px] font-bold text-white mb-0.5">AWS Free Tier</p>
-            <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-opacity-80">Admin</p>
+            <p className="text-[11px] font-bold text-white mb-0.5">{user?.email?.split('@')[0] || 'AWS Free Tier'}</p>
+            <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-opacity-80-">{user ? 'Verified' : 'Admin'}</p>
           </div>
           <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-[0_0_15px_rgba(99,102,241,0.2)]">
             <User className="w-[18px] h-[18px] opacity-90" />

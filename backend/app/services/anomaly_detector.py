@@ -80,9 +80,6 @@ class AnomalyDetector:
         if estimated_cost > settings.cost_threshold_for_stop * 2:
             reasons.append("Estimated cost is significantly above optimization threshold")
 
-        if not reasons:
-            reasons.append("Isolation Forest score within normal range" if not is_anomaly else "Isolation Forest detected unusual behavior")
-
         return AnomalyResult(
             is_anomaly=is_anomaly,
             score=round(raw_score, 4),

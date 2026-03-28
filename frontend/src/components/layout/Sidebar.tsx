@@ -1,6 +1,6 @@
 import { LayoutDashboard, AlertTriangle, Zap, Settings, Brain, LogOut, Server } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { logout } from '../../services/auth';
+import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -12,9 +12,10 @@ const navItems = [
 ];
 
 export function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (tab: string) => void }) {
+  const { user, logout } = useAuth();
   return (
     <aside className="w-[280px] h-screen bg-[#09090b] border-r border-white/[0.05] flex flex-col relative z-50 inner-glow overflow-y-auto">
-      <div className="h-[72px] px-6 border-b border-white/[0.05] flex items-center gap-4 group cursor-pointer shrink-0" onClick={() => window.location.href = '/'}>
+      <div className="h-[72px] px-6 border-b border-white/[0.05] flex items-center gap-4 group cursor-pointer shrink-0" onClick={() => window.location.href = '/landing'}>
         <div className="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center shadow-inner group-hover:bg-white/[0.05] transition-all overflow-hidden relative">
           <div className="absolute inset-0 bg-indigo-500/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
           <Zap className="w-5 h-5 text-indigo-400 relative z-10" />
@@ -62,7 +63,6 @@ export function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setAct
         <button
           onClick={() => {
             logout();
-            window.location.reload();
           }}
           className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-[13px] font-bold text-zinc-500 hover:text-danger hover:bg-danger/5 transition-all duration-300 group mt-4"
         >
@@ -82,6 +82,19 @@ export function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setAct
             Upgrade
           </button>
         </div>
+        
+        {/* User Profile Info */}
+        {user && (
+          <div className="mt-6 flex items-center gap-3 px-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-black text-white shadow-lg">
+              {user.email?.[0].toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+               <p className="text-[10px] font-black text-white truncate">{user.email}</p>
+               <p className="text-[8px] font-bold text-zinc-600 uppercase tracking-tighter">Verified Identity</p>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

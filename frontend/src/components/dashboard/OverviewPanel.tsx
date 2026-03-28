@@ -83,7 +83,6 @@ export function OverviewPanel() {
         if (cost.trend.length === 0) setHasData(false);
       } catch (err) {
         console.error("Failed to fetch backend data:", err);
-        // Keep hasData as true for now to show the dashboard even on error (could fall back to mock)
       } finally {
         setLoading(false);
       }
@@ -108,7 +107,7 @@ export function OverviewPanel() {
             title: `Alert: ${anomaly.resource_id}`,
             impact: `${anomaly.anomaly_type} detected. System marked as ${anomaly.severity} severity.`,
             priority: anomaly.severity.toLowerCase(),
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            time: new Date(anomaly.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           });
         }
       });
@@ -405,12 +404,12 @@ export function OverviewPanel() {
                   </div>
                   <span className="text-[10px] text-zinc-500 font-bold uppercase">{new Date(prob.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                <div className="flex items-end justify-between">
-                   <div>
+                   <div className="flex items-end justify-between">
+                    <div>
                       <p className="text-xs text-zinc-400 font-medium mb-1">{prob.description}</p>
                       <p className="text-lg font-black text-red-400 tracking-tight">{prob.anomaly_type}</p>
-                   </div>
-                </div>
+                    </div>
+                  </div>
               </motion.div>
             )) : (
               <p className="text-xs text-zinc-500 italic text-center py-10">No active anomalies detected.</p>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Bell, Key, CreditCard, Shield, Smartphone } from 'lucide-react';
+import { User, Key, CreditCard, Shield, Smartphone } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function SettingsPanel() {
@@ -7,7 +7,6 @@ export function SettingsPanel() {
 
   const menuItems = [
     { id: 'profile', label: 'Profile & Account', icon: User },
-    { id: 'notifications', label: 'Alert Preferences', icon: Bell },
     { id: 'api', label: 'API Keys', icon: Key },
     { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
   ];
@@ -121,14 +120,13 @@ export function SettingsPanel() {
             </motion.div>
           )}
 
-          {/* Placeholders for others */}
-          {['notifications', 'billing'].includes(activeMenu) && (
+          {activeMenu === 'billing' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#111113]/50 border border-white/5 p-8 rounded-3xl flex flex-col items-center justify-center text-center py-24">
                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                  {activeMenu === 'notifications' ? <Bell className="w-8 h-8 text-zinc-500" /> : <CreditCard className="w-8 h-8 text-zinc-500" />}
+                  <CreditCard className="w-8 h-8 text-zinc-500" />
                </div>
                <h2 className="text-xl font-bold text-white mb-2">Section in Development</h2>
-               <p className="text-sm text-zinc-500 max-w-sm">The {activeMenu} configuration panel is currently being updated to the latest routing architecture.</p>
+               <p className="text-sm text-zinc-500 max-w-sm">The billing configuration panel is currently being updated to the latest routing architecture.</p>
             </motion.div>
           )}
 

@@ -56,9 +56,11 @@ export const getAnomalies = async (): Promise<AnomalyResponse[]> => {
   
   // Transform backend AnomalyRead into frontend AnomalyResponse
   return data.map((item: any) => {
-     let severity = 'Low';
-     if (item.anomaly_score > 0.8) severity = 'High';
-     else if (item.anomaly_score > 0.5) severity = 'Medium';
+     let severity = item.severity || 'Low';
+     if (!item.severity) {
+        if (item.anomaly_score > 0.8) severity = 'High';
+        else if (item.anomaly_score > 0.5) severity = 'Medium';
+     }
      
      return {
         id: item.id,

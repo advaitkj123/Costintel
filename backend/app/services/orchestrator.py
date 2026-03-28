@@ -1,4 +1,5 @@
-from datetime import datetime
+import logging
+from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -23,6 +24,8 @@ from app.services.decision_engine import DecisionEngine
 from app.services.optimizer import Optimizer
 
 settings = get_settings()
+
+logger = logging.getLogger(__name__)
 
 
 class MetricOrchestrator:
@@ -102,6 +105,12 @@ class MetricOrchestrator:
                     anomaly_score=anomaly_result.score,
                     reason=anomaly_result.reason,
                 )
+            )
+            logger.warning(
+                "Anomaly detected for %s: score=%s, reason=%s",
+                resource.id,
+                anomaly_result.score,
+                anomaly_result.reason,
             )
 
         decision = self.decision_engine.evaluate(resource, payload, estimated_cost, anomaly_result)
