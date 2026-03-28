@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Shield, Lock, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Shield, Lock, Loader2 } from 'lucide-react';
 
 // --- SHARED PREMIUM COMPONENTS ---
 
@@ -13,37 +13,34 @@ export const FloatingInput: React.FC<{
   required?: boolean;
 }> = ({ label, type = "text", value, onChange, icon, required }) => {
   const [isFocused, setIsFocused] = useState(false);
-  const isFilled = value && value.length > 0;
+  const isFilled = value !== undefined && value !== null && value.length > 0;
 
   return (
-    <div className="relative group mb-6">
+    <div className="relative group mb-6 w-full">
       <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 z-10 ${isFocused || isFilled ? 'opacity-0 scale-75' : 'opacity-40 text-white'}`}>
         {icon}
       </div>
       <input
         type={type}
-        value={value}
+        value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         required={required}
         placeholder={label}
-        className={`w-full bg-white/[0.05] border ${isFocused ? 'border-indigo-500 ring-4 ring-indigo-500/10' : 'border-white/10'} rounded-2xl py-4 ${icon ? 'pl-12' : 'pl-5'} pr-5 text-sm font-medium text-white transition-all outline-none placeholder-transparent relative z-0`}
+        className={`w-full bg-white/[0.05] border ${isFocused ? 'border-indigo-500 ring-4 ring-indigo-500/10' : 'border-white/10'} rounded-2xl py-4 ${icon ? 'pl-12' : 'pl-5'} pr-5 text-sm font-medium text-white transition-all outline-none placeholder-transparent relative z-10`}
       />
       <label 
         className={`absolute left-4 transition-all duration-300 pointer-events-none font-bold uppercase tracking-widest text-[10px] z-20 ${
           isFocused || isFilled 
-            ? '-top-2.5 bg-[#050505] px-2 text-indigo-400 scale-90 translate-x-2' 
+            ? '-top-2.5 bg-[#111113] px-2 text-indigo-400 scale-90 translate-x-2' 
             : `top-1/2 -translate-y-1/2 ${icon ? 'left-12' : 'left-5'} text-zinc-400`
         }`}
       >
         {label}
       </label>
       {isFocused && (
-        <motion.div 
-          layoutId="focus-glow"
-          className="absolute inset-0 rounded-2xl bg-indigo-500/5 blur-md -z-10"
-        />
+        <div className="absolute inset-0 rounded-2xl bg-indigo-500/5 blur-md -z-10" />
       )}
     </div>
   );

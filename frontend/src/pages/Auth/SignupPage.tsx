@@ -90,16 +90,9 @@ export const SignupPage: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleSignup} className="relative">
-            <AnimatePresence mode="wait">
+          <form onSubmit={handleSignup} className="relative transition-all duration-300">
               {step === 1 && (
-                <motion.div 
-                  key="step1"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-1"
-                >
+                <div key="step1" className="space-y-1">
                   <FloatingInput 
                     label="Email Address" 
                     icon={<Mail className="w-4 h-4" />} 
@@ -126,17 +119,11 @@ export const SignupPage: React.FC = () => {
                   <GradientButton onClick={nextStep} className="mt-8">
                     Next Step <ArrowRight className="w-4 h-4" />
                   </GradientButton>
-                </motion.div>
+                </div>
               )}
 
               {step === 2 && (
-                <motion.div 
-                  key="step2"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-1"
-                >
+                <div key="step2" className="space-y-1">
                   <FloatingInput 
                     label="Operational Name" 
                     icon={<User className="w-4 h-4" />} 
@@ -180,17 +167,11 @@ export const SignupPage: React.FC = () => {
                         Continue <ArrowRight className="w-4 h-4" />
                     </GradientButton>
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {step === 3 && (
-                <motion.div 
-                  key="step3"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-1"
-                >
+                <div key="step3" className="space-y-1">
                   <div className="bg-indigo-500/5 border border-indigo-500/10 p-6 rounded-[2rem] mb-8">
                      <p className="text-[11px] text-zinc-500 font-medium leading-relaxed italic">
                         Initialize telemetry now by providing your read-only access keys, or skip to finish account setup.
@@ -218,9 +199,8 @@ export const SignupPage: React.FC = () => {
                         Finalize <Check className="w-4 h-4" />
                     </GradientButton>
                   </div>
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
           </form>
 
           <TrustBadge />
