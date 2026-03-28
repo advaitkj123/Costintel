@@ -44,6 +44,22 @@ class Settings(BaseSettings):
     default_metric_window: int = 200
     anomaly_min_training_points: int = 12
     isolation_forest_contamination: float = 0.08
+    
+    # Hybrid Model Tuning
+    anomaly_ae_weight: float = 0.4
+    anomaly_if_weight: float = 0.4
+    anomaly_rule_weight: float = 0.2
+    
+    # Optimization & Scaling
+    anomaly_retrain_interval: int = 20
+    anomaly_dynamic_threshold_sigma: float = 3.0
+    
+    # Feature Importance Mapping (Updated with Efficiency Metrics)
+    feature_names: List[str] = Field(default_factory=lambda: [
+        "cpu", "memory", "requests", "storage", "cost", "hour", "day_of_week", 
+        "rolling_cpu", "rolling_req", "rolling_cost",
+        "cost_per_req", "cpu_per_req", "mem_per_req", "storage_growth", "cost_growth"
+    ])
 
 
 @lru_cache
